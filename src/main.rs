@@ -1,3 +1,8 @@
+use cli::App;
+
+mod cli;
+mod tidy;
+
 fn main() {
-    println!("Hello, world!");
+    let _ = App::run();
 }

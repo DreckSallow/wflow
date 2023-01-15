@@ -7,5 +7,5 @@ edition = "2021"
 
 [dependencies]
 clap = { version = "4.0.32", features = ["derive"] }
-cli_printer = "0.1.0"
+cli_printer = "0.2.0"
 crossterm = "0.25.0"
