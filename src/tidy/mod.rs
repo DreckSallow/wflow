@@ -1,4 +1,4 @@
-mod proyects_db;
+mod projects_db;
 
 use std::{
     cell::RefCell,
@@ -25,8 +25,6 @@ use crossterm::{
 
 use crate::cli::TidyCommands;
 
-use self::proyects_db::get_proyects_content;
-
 fn canonicalize_path<P: AsRef<Path>>(path: P) -> io::Result<PathBuf> {
     const VERBATIM_PREFIX: &str = r#"\\?\"#;
     let p = path.as_ref().canonicalize()?.display().to_string();
@@ -51,21 +49,21 @@ impl TidyProgram {
                 return open_project(&mut stdout);
             }
             TidyCommands::Add { path } => {
-                return add_proyect(&mut stdout, path);
+                return add_project(&mut stdout, path);
             }
             TidyCommands::New => {
-                return new_proyect(&mut stdout);
+                return new_project(&mut stdout);
             }
             TidyCommands::Remove => {
-                return remove_proyect(&mut stdout);
+                return remove_project(&mut stdout);
             }
         }
     }
 }
 
-fn add_proyect(stdout: &mut Stdout, path: &PathBuf) -> io::Result<()> {
+fn add_project(stdout: &mut Stdout, path: &PathBuf) -> io::Result<()> {
     let path_to_save = canonicalize_path(path)?;
-    proyects_db::append_to_first_proyect(&path_to_save)?;
+    projects_db::append_to_first_project(&path_to_save)?;
     execute!(
         stdout,
         Print(ICON_CHECK.green()),
@@ -76,10 +74,10 @@ fn add_proyect(stdout: &mut Stdout, path: &PathBuf) -> io::Result<()> {
     Ok(())
 }
 
-fn new_proyect(stdout: &mut Stdout) -> io::Result<()> {
+fn new_project(stdout: &mut Stdout) -> io::Result<()> {
     let mut input_widget: Input<Rc<RefCell<String>>> = Input::new(
-        IconAndLabel(ICON_QUESTION, "Name of the new proyect: "),
-        IconAndLabel(ICON_CHECK, "Name of the new proyect: "),
+        IconAndLabel(ICON_QUESTION, "Name of the new project: "),
+        IconAndLabel(ICON_CHECK, "Name of the new project: "),
     );
 
     input_widget.after(move |input_state, global_state| {
@@ -99,7 +97,7 @@ fn new_proyect(stdout: &mut Stdout) -> io::Result<()> {
 
     let mut new_path = env::current_dir()?;
     new_path.push(input_content.to_string());
-    proyects_db::append_to_first_proyect(&new_path)?;
+    projects_db::append_to_first_project(&new_path)?;
     fs::create_dir(new_path)?;
     execute!(stdout, Print("\nNew Folder create and save"))?;
     Ok(())
@@ -107,17 +105,17 @@ fn new_proyect(stdout: &mut Stdout) -> io::Result<()> {
 
 #[derive(Default, Clone)]
 struct GlobalState {
-    proyect_selected: Option<String>,
-    remove_folder_proyect: bool,
+    project_selected: Option<String>,
+    remove_folder_project: bool,
 }
 
-fn remove_proyect(stdout: &mut Stdout) -> io::Result<()> {
-    let binding = get_proyects_content()?;
-    let mut proyects: Vec<&str> = binding.trim().lines().collect();
-    proyects.push("None");
+fn remove_project(stdout: &mut Stdout) -> io::Result<()> {
+    let binding = projects_db::get_projects_content()?;
+    let mut projects: Vec<&str> = binding.trim().lines().collect();
+    projects.push("None");
 
-    // List of all proyects to select
-    let mut list: ListSelected<Rc<RefCell<GlobalState>>> = ListSelected::new(proyects);
+    // List of all projects to select
+    let mut list: ListSelected<Rc<RefCell<GlobalState>>> = ListSelected::new(projects);
     list.add_text_init(ICON_QUESTION, "Select the project to delete: ");
     list.add_text_final(ICON_CHECK, "Selected option: ");
 
@@ -126,7 +124,7 @@ fn remove_proyect(stdout: &mut Stdout) -> io::Result<()> {
             if list_state.offset == list_state.length - 1 {
                 return Action::Exit;
             }
-            (*global_data).borrow_mut().proyect_selected = list_state.current_option.clone();
+            (*global_data).borrow_mut().project_selected = list_state.current_option.clone();
             return Action::Next;
         }
         Action::KeepSection
@@ -139,7 +137,7 @@ fn remove_proyect(stdout: &mut Stdout) -> io::Result<()> {
     remove_folder_list.add_text_final(ICON_CHECK, "Also delete the folder: ");
 
     remove_folder_list.after(|list_state, global_state| {
-        (*global_state).borrow_mut().remove_folder_proyect =
+        (*global_state).borrow_mut().remove_folder_project =
             if list_state.offset == 0 { true } else { false };
 
         if list_state.is_selected {
@@ -153,15 +151,15 @@ fn remove_proyect(stdout: &mut Stdout) -> io::Result<()> {
     remove_text.after(|local_state, global_state| {
         let context_state = &(*global_state).borrow_mut();
 
-        let selected_project = match &context_state.proyect_selected {
+        let selected_project = match &context_state.project_selected {
             Some(p) => p.to_owned(),
             None => {
-                local_state.text.push_str("\nNot exist the proyect!");
+                local_state.text.push_str("\nNot exist the project!");
                 return Action::Exit;
             }
         };
 
-        let res = proyects_db::delete_proyect(Path::new(&selected_project));
+        let res = projects_db::delete_project(Path::new(&selected_project));
 
         if let Err(e) = res {
             local_state.text.push_str(&format!("\n{}", e.to_string()));
@@ -169,8 +167,8 @@ fn remove_proyect(stdout: &mut Stdout) -> io::Result<()> {
         }
         local_state.text.push_str("\nProject removed!");
 
-        if context_state.remove_folder_proyect {
-            let path_opt = &context_state.proyect_selected;
+        if context_state.remove_folder_project {
+            let path_opt = &context_state.project_selected;
 
             let path_folder = match path_opt {
                 Some(p) => p.to_owned(),
@@ -207,12 +205,12 @@ fn remove_proyect(stdout: &mut Stdout) -> io::Result<()> {
 }
 
 fn open_project(stdout: &mut Stdout) -> io::Result<()> {
-    let binding = get_proyects_content()?;
-    let mut proyects: Vec<&str> = binding.trim().lines().collect();
-    proyects.push("None");
+    let binding = projects_db::get_projects_content()?;
+    let mut projects: Vec<&str> = binding.trim().lines().collect();
+    projects.push("None");
 
-    // List of all proyects to select
-    let mut list: ListSelected<Rc<RefCell<Option<String>>>> = ListSelected::new(proyects);
+    // List of all projects to select
+    let mut list: ListSelected<Rc<RefCell<Option<String>>>> = ListSelected::new(projects);
     list.add_text_init(ICON_QUESTION, "Select the project to delete: ");
     list.add_text_final(ICON_CHECK, "Selected option: ");
 

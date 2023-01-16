@@ -18,7 +18,7 @@ pub struct Cli {
 
 #[derive(Subcommand, Debug)]
 pub enum Commands {
-    ///Tidy is a sub-tool for manage the proyects
+    ///Tidy is a sub-tool for manage your projects
     Tidy {
         #[command(subcommand)]
         command: TidyCommands,
@@ -27,13 +27,13 @@ pub enum Commands {
 
 #[derive(Subcommand, Debug)]
 pub enum TidyCommands {
-    ///Open a proyect with an editor
+    ///Open a project with an editor
     Open,
-    ///Add the current path to proyects
+    ///Add the current path to projects
     Add { path: PathBuf },
-    ///Create new folder proyect and save
+    ///Create new folder project and save
     New,
-    ///Remove a proyect
+    ///Remove a project
     Remove,
 }
 
