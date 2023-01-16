@@ -15,7 +15,7 @@ use cli_printer::{
         view,
     },
     styles::{ICON_CHECK, ICON_QUESTION},
-    widgets::{self, Input, ListSelected},
+    widgets::{self, Input, ListSelected, TextBlock},
 };
 use crossterm::{
     execute,
@@ -85,7 +85,7 @@ fn new_proyect(stdout: &mut Stdout) -> io::Result<()> {
 
     input_widget.after(move |input_state, global_state| {
         if input_state.complete_input && input_state.input.len() > 0 {
-            *global_state.borrow_mut() = input_state.input.to_owned();
+            *(*global_state).borrow_mut() = input_state.input.to_owned();
             return Action::Next;
         }
         Action::KeepSection
@@ -109,49 +109,100 @@ fn new_proyect(stdout: &mut Stdout) -> io::Result<()> {
 #[derive(Default, Clone)]
 struct GlobalState {
     proyect_selected: Option<String>,
+    remove_folder_proyect: bool,
 }
 
 fn remove_proyect(stdout: &mut Stdout) -> io::Result<()> {
     let binding = get_proyects_content()?;
     let mut proyects: Vec<&str> = binding.trim().lines().collect();
-    proyects.push("Exit");
+    proyects.push("None");
 
+    // List of all proyects to select
     let mut list: ListSelected<Rc<RefCell<GlobalState>>> = ListSelected::new(proyects);
     list.add_text_init(ICON_QUESTION, "Select the project to delete: ");
-    list.add_text_final(ICON_CHECK, "Selected proyect: ");
+    list.add_text_final(ICON_CHECK, "Selected option: ");
 
     list.after(|list_state, global_data| {
         if list_state.is_selected {
             if list_state.offset == list_state.length - 1 {
                 return Action::Exit;
             }
-            global_data.borrow_mut().proyect_selected = list_state.current_option.clone();
+            (*global_data).borrow_mut().proyect_selected = list_state.current_option.clone();
             return Action::Next;
         }
         Action::KeepSection
     });
 
+    // List to render: 'Yes' | 'No'
     let mut remove_folder_list: ListSelected<Rc<RefCell<GlobalState>>> =
         widgets::ListSelected::new(vec!["Yes", "No"]);
     remove_folder_list.add_text_init(ICON_QUESTION, "Also delete the folder: ");
     remove_folder_list.add_text_final(ICON_CHECK, "Also delete the folder: ");
 
-    remove_folder_list.after(|list_state, _global_state| {
+    remove_folder_list.after(|list_state, global_state| {
+        (*global_state).borrow_mut().remove_folder_proyect =
+            if list_state.offset == 0 { true } else { false };
+
         if list_state.is_selected {
-            if list_state.offset == list_state.length - 1 {
-                return Action::Exit;
-            }
             return Action::Next;
         }
         Action::KeepSection
     });
 
+    let mut remove_text: TextBlock<Rc<RefCell<GlobalState>>> = TextBlock::new("Removing...");
+
+    remove_text.after(|local_state, global_state| {
+        let context_state = &(*global_state).borrow_mut();
+
+        let selected_project = match &context_state.proyect_selected {
+            Some(p) => p.to_owned(),
+            None => {
+                local_state.text.push_str("\nNot exist the proyect!");
+                return Action::Exit;
+            }
+        };
+
+        let res = proyects_db::delete_proyect(Path::new(&selected_project));
+
+        if let Err(e) = res {
+            local_state.text.push_str(&format!("\n{}", e.to_string()));
+            return Action::Exit;
+        }
+        local_state.text.push_str("\nProject removed!");
+
+        if context_state.remove_folder_proyect {
+            let path_opt = &context_state.proyect_selected;
+
+            let path_folder = match path_opt {
+                Some(p) => p.to_owned(),
+                None => {
+                    local_state.text.push_str("\nUnexpected error ocurred");
+                    return Action::Exit;
+                }
+            };
+
+            let path = Path::new(path_folder.as_str());
+
+            if !path.is_dir() {
+                local_state.text.push_str("\nThe path is not a folder");
+                return Action::Exit;
+            }
+
+            if let Err(e) = fs::remove_dir_all(path) {
+                local_state.text.push_str(&format!("\n{}", e.to_string()));
+                return Action::Exit;
+            }
+            local_state.text.push_str("\nFolder removed!!");
+        }
+
+        Action::Next
+    });
+
     let mut render_view = view::SectionsView::new(GlobalState::default());
     render_view.child(list);
     render_view.child(remove_folder_list);
+    render_view.child(remove_text);
     render_view.render(stdout)?;
-
-    // let state = &*render_view.global_state.borrow();
 
     Ok(())
 }
