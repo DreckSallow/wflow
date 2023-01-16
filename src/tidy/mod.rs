@@ -5,6 +5,7 @@ use std::{
     env, fs,
     io::{self, stdout, Stdout},
     path::{Path, PathBuf},
+    process::{Child, Command},
     rc::Rc,
 };
 
@@ -46,19 +47,17 @@ impl TidyProgram {
         let mut stdout = stdout();
 
         match tidy_command {
-            TidyCommands::Open => todo!(),
+            TidyCommands::Open => {
+                return open_project(&mut stdout);
+            }
             TidyCommands::Add { path } => {
-                let _r = add_proyect(&mut stdout, path);
-
-                Ok(())
+                return add_proyect(&mut stdout, path);
             }
             TidyCommands::New => {
-                let _r = new_proyect(&mut stdout);
-                Ok(())
+                return new_proyect(&mut stdout);
             }
             TidyCommands::Remove => {
-                let _r = remove_proyect(&mut stdout);
-                Ok(())
+                return remove_proyect(&mut stdout);
             }
         }
     }
@@ -205,4 +204,68 @@ fn remove_proyect(stdout: &mut Stdout) -> io::Result<()> {
     render_view.render(stdout)?;
 
     Ok(())
+}
+
+fn open_project(stdout: &mut Stdout) -> io::Result<()> {
+    let binding = get_proyects_content()?;
+    let mut proyects: Vec<&str> = binding.trim().lines().collect();
+    proyects.push("None");
+
+    // List of all proyects to select
+    let mut list: ListSelected<Rc<RefCell<Option<String>>>> = ListSelected::new(proyects);
+    list.add_text_init(ICON_QUESTION, "Select the project to delete: ");
+    list.add_text_final(ICON_CHECK, "Selected option: ");
+
+    list.after(|list_state, global_state| {
+        if list_state.is_selected {
+            if list_state.offset == list_state.length - 1 {
+                return Action::Exit;
+            }
+            *(*global_state).borrow_mut() = list_state.current_option.clone();
+            return Action::Next;
+        }
+        Action::KeepSection
+    });
+
+    let mut text_open: TextBlock<Rc<RefCell<Option<String>>>> = TextBlock::new("Open...");
+    text_open.after(|local_state, global_state| {
+        let project_selected = &*(global_state).borrow_mut();
+
+        match project_selected {
+            Some(s) => {
+                let path = s.as_str();
+                let res = open_code(path);
+                match res {
+                    Ok(_c) => {
+                        local_state.text.push_str("\nOpened!!");
+                        return Action::Next;
+                    }
+                    Err(e) => {
+                        local_state.text.push_str(&format!("\n{}", e.to_string()));
+                        return Action::Exit;
+                    }
+                }
+            }
+            None => {
+                return Action::Exit;
+            }
+        };
+    });
+
+    let mut render_view = view::SectionsView::new(Some(String::new()));
+    render_view.child(list);
+    render_view.child(text_open);
+    render_view.render(stdout)?;
+
+    Ok(())
+}
+
+#[cfg(target_os = "windows")]
+fn open_code(path: &str) -> io::Result<Child> {
+    Command::new("cmd").args(["/C", "code", path]).spawn()
+}
+
+#[cfg(not(target_os = "windows"))]
+fn open_code(path: &str) -> io::Result<Child> {
+    Command::new("cmd").args(["-C", "code", path]).spawn()
 }
