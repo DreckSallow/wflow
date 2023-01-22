@@ -63,6 +63,10 @@ impl TidyProgram {
 
 fn add_project(stdout: &mut Stdout, path: &PathBuf) -> io::Result<()> {
     let path_to_save = canonicalize_path(path)?;
+    if !path_to_save.is_dir() {
+        execute!(stdout, Print("The path is not the path of a folder"))?;
+        return Ok(());
+    }
     projects_db::append_to_first_project(&path_to_save)?;
     execute!(
         stdout,
@@ -207,6 +211,10 @@ fn remove_project(stdout: &mut Stdout) -> io::Result<()> {
 fn open_project(stdout: &mut Stdout) -> io::Result<()> {
     let binding = projects_db::get_projects_content()?;
     let mut projects: Vec<&str> = binding.trim().lines().collect();
+    if projects.len() <= 0 {
+        execute!(stdout, Print("You don't have a saved project yet."))?;
+        return Ok(());
+    }
     projects.push("None");
 
     // List of all projects to select
@@ -265,5 +273,5 @@ fn open_code(path: &str) -> io::Result<Child> {
 
 #[cfg(not(target_os = "windows"))]
 fn open_code(path: &str) -> io::Result<Child> {
-    Command::new("cmd").args(["-C", "code", path]).spawn()
+    Command::new("cmd").args(["-c", "code", path]).spawn()
 }
