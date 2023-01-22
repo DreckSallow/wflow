@@ -57,6 +57,9 @@ impl TidyProgram {
             TidyCommands::Remove => {
                 return remove_project(&mut stdout);
             }
+            TidyCommands::List => {
+                return display_projects_list(&mut stdout);
+            }
         }
     }
 }
@@ -262,6 +265,19 @@ fn open_project(stdout: &mut Stdout) -> io::Result<()> {
     render_view.child(list);
     render_view.child(text_open);
     render_view.render(stdout)?;
+
+    Ok(())
+}
+
+fn display_projects_list(stdout: &mut Stdout) -> io::Result<()> {
+    let projects_string = projects_db::get_projects_content()?;
+    let projects_content: Vec<&str> = projects_string.trim().lines().collect();
+
+    let mut count = 0;
+    for project in &projects_content {
+        execute!(stdout, Print(&format!("{count}: {}\n", project)))?;
+        count += 1;
+    }
 
     Ok(())
 }

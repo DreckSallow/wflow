@@ -27,10 +27,12 @@ pub enum Commands {
 
 #[derive(Subcommand, Debug)]
 pub enum TidyCommands {
-    ///Open a project with an editor
-    Open,
     ///Add the current path to projects
     Add { path: PathBuf },
+    ///List all projects saved
+    List,
+    ///Open a project with an editor
+    Open,
     ///Create new folder project and save
     New,
     ///Remove a project
