@@ -2,7 +2,7 @@ use std::{io, path::PathBuf};
 
 use clap::{Parser, Subcommand};
 
-use crate::tidy::TidyProgram;
+use crate::{tidy::TidyProgram, todo::TodoProgram};
 
 const ABOUT: &str = "Flow is a good TooKit for manage workflow of developers";
 
@@ -23,6 +23,11 @@ pub enum Commands {
         #[command(subcommand)]
         command: TidyCommands,
     },
+    ///Todo is a sub-tool for manage your todos
+    Todo {
+        #[command(subcommand)]
+        command: TodoCommands,
+    },
 }
 
 #[derive(Subcommand, Debug)]
@@ -39,6 +44,14 @@ pub enum TidyCommands {
     Remove,
 }
 
+#[derive(Subcommand, Debug)]
+pub enum TodoCommands {
+    ///List all todos
+    List,
+    ///Create new todo and save
+    Create,
+}
+
 pub struct App;
 
 impl App {
@@ -46,6 +59,7 @@ impl App {
         let cli = Cli::parse();
         match &cli.command {
             Commands::Tidy { command } => TidyProgram::run(command),
+            Commands::Todo { command } => TodoProgram::run(command),
         }
     }
 }
