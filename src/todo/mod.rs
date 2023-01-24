@@ -1,3 +1,6 @@
+mod todo;
+mod todo_utils;
+
 use std::{
     cell::RefCell,
     io::{self, stdout, Stdout},
@@ -17,43 +20,10 @@ use crossterm::{execute, style::Print};
 
 use crate::{cli::TodoCommands, constants, utils};
 
-#[derive(Debug)]
-enum TodoState {
-    Completed,
-    Cancelled,
-    NoStarted,
-}
-
-impl From<i8> for TodoState {
-    fn from(n: i8) -> Self {
-        match n {
-            -1 => TodoState::Cancelled,
-            0 => TodoState::NoStarted,
-            1 => TodoState::Completed,
-            _ => TodoState::NoStarted,
-        }
-    }
-}
-
-impl TodoState {
-    pub fn to_i8(&self) -> i8 {
-        match self {
-            TodoState::Completed => 1,
-            TodoState::Cancelled => -1,
-            TodoState::NoStarted => 0,
-        }
-    }
-}
-
-impl ToString for TodoState {
-    fn to_string(&self) -> String {
-        match self {
-            TodoState::Completed => String::from("Completed"),
-            TodoState::Cancelled => String::from("Cancelled"),
-            TodoState::NoStarted => String::from("Not started"),
-        }
-    }
-}
+use self::{
+    todo::{Todo, TodoState},
+    todo_utils::table,
+};
 
 pub struct TodoProgram;
 
@@ -88,35 +58,32 @@ fn list_todo(stdout: &mut Stdout) -> io::Result<()> {
     if todo_content.trim().len() == 0 {
         return Ok(());
     }
-    let todos: Vec<Vec<&str>> = todo_content
+    let todos_collect: Vec<Vec<String>> = todo_content
         .trim()
         .lines()
-        .map(|l| l.split(":").collect())
+        .map(|f| {
+            let todo = Todo::try_from(f).unwrap();
+            vec![todo.icon, todo.description, todo.status.to_string()]
+        })
         .collect();
 
-    for todo in todos {
-        let todo_msg = todo.get(0).unwrap();
+    let content_table = table(
+        todos_collect,
+        vec!["Icon".to_string(), "Todo".to_string(), "Status".to_string()],
+    );
 
-        let todo_status = match todo.get(1).unwrap().parse::<i8>() {
-            Ok(s) => TodoState::from(s),
-            Err(_) => {
-                execute!(stdout, Print("Cannot parse the todo state"))?;
-                return Ok(());
-            }
-        };
-
-        execute!(
-            stdout,
-            Print(todo_msg),
-            Print(todo_status.to_string()),
-            Print("\n")
-        )?;
+    for column in &content_table {
+        for row in column {
+            execute!(stdout, Print(""), Print(row), Print(" "))?;
+        }
+        execute!(stdout, Print(" \n"))?;
     }
 
     Ok(())
 }
 
 fn create_todo(stdout: &mut Stdout) -> io::Result<()> {
+    print!("\x1B[2J\x1B[1;1H");
     let mut input: Input<Rc<RefCell<String>>> = widgets::Input::new(
         IconAndLabel(ICON_QUESTION, "Type the todo: "),
         IconAndLabel(ICON_CHECK, "Type the todo: "),
