@@ -50,6 +50,8 @@ pub enum TodoCommands {
     List,
     ///Create new todo and save
     Create,
+    ///Change the todo status
+    Check,
 }
 
 pub struct App;

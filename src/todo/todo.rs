@@ -1,5 +1,4 @@
-use cli_printer::styles::ICON_CHECK;
-
+#[derive(Clone)]
 pub struct Todo {
     pub description: String,
     pub status: TodoState,
@@ -23,8 +22,7 @@ impl TryFrom<&str> for Todo {
         };
 
         let icon = match status {
-            TodoState::Completed => format!("[{}]", ICON_CHECK.trim()),
-            TodoState::Cancelled => format!("[{}]", "-"),
+            TodoState::Completed => format!("[x]"),
             TodoState::NoStarted => format!("[ ]"),
         };
 
@@ -44,19 +42,24 @@ impl Todo {
             icon: String::from("[ ]"),
         }
     }
+    pub fn change_icon(&mut self, new_state: TodoState) {
+        self.icon = match new_state {
+            TodoState::Completed => format!("[x]"),
+            TodoState::NoStarted => format!("[ ]"),
+        };
+        self.status = new_state
+    }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum TodoState {
     Completed,
-    Cancelled,
     NoStarted,
 }
 
 impl From<i8> for TodoState {
     fn from(n: i8) -> Self {
         match n {
-            -1 => TodoState::Cancelled,
             0 => TodoState::NoStarted,
             1 => TodoState::Completed,
             _ => TodoState::NoStarted,
@@ -68,7 +71,6 @@ impl TodoState {
     pub fn to_i8(&self) -> i8 {
         match self {
             TodoState::Completed => 1,
-            TodoState::Cancelled => -1,
             TodoState::NoStarted => 0,
         }
     }
@@ -78,7 +80,6 @@ impl ToString for TodoState {
     fn to_string(&self) -> String {
         match self {
             TodoState::Completed => String::from("Completed"),
-            TodoState::Cancelled => String::from("Cancelled"),
             TodoState::NoStarted => String::from("Not started"),
         }
     }
