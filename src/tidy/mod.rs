@@ -57,6 +57,9 @@ impl TidyProgram {
             TidyCommands::Remove => {
                 return remove_project(&mut stdout);
             }
+            TidyCommands::List => {
+                return display_projects_list(&mut stdout);
+            }
         }
     }
 }
@@ -116,6 +119,10 @@ struct GlobalState {
 fn remove_project(stdout: &mut Stdout) -> io::Result<()> {
     let binding = projects_db::get_projects_content()?;
     let mut projects: Vec<&str> = binding.trim().lines().collect();
+    if projects.len() <= 0 {
+        execute!(stdout, Print("You don't have a saved project yet."))?;
+        return Ok(());
+    }
     projects.push("None");
 
     // List of all projects to select
@@ -262,6 +269,23 @@ fn open_project(stdout: &mut Stdout) -> io::Result<()> {
     render_view.child(list);
     render_view.child(text_open);
     render_view.render(stdout)?;
+
+    Ok(())
+}
+
+fn display_projects_list(stdout: &mut Stdout) -> io::Result<()> {
+    let projects_string = projects_db::get_projects_content()?;
+    let projects: Vec<&str> = projects_string.trim().lines().collect();
+    if projects.len() <= 0 {
+        execute!(stdout, Print("You don't have a saved project yet."))?;
+        return Ok(());
+    }
+
+    let mut count = 0;
+    for project in &projects {
+        execute!(stdout, Print(&format!("{count}: {}\n", project)))?;
+        count += 1;
+    }
 
     Ok(())
 }
