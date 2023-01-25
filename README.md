@@ -9,6 +9,7 @@ Wflow is a cli tool for `manage the workflow` much better. The cli contains two 
 
 ```
   cargo install wflow
+  wflow
 ```
 
 ## Usage:
