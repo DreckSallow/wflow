@@ -2,6 +2,11 @@
 name = "flow"
 version = "0.1.0"
 edition = "2021"
+authors=["Dreck <arandadikson@gmail.com>"]
+desrciption="Flow is a cli tool for manage the workflow much better. The cli conatins two mean subcommands, and they are:"
+readme="README.md"
+repository="https://github.com/Dreck2003/flow"
+license = "MIT OR Apache-2.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
