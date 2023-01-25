@@ -1,6 +1,6 @@
-# Flow
+# Wflow
 
-Flow is a cli tool for `manage the workflow` much better. The cli conatins two mean subcommands, and they are:
+Wflow is a cli tool for `manage the workflow` much better. The cli contains two mean subcommands, and they are:
 
 - `tidy`: Manage your project folders
 - `todo`: Manage your todos
@@ -8,12 +8,12 @@ Flow is a cli tool for `manage the workflow` much better. The cli conatins two m
 ## Install
 
 ```
-  cargo install flow
+  cargo install wflow
 ```
 
 ## Usage:
 
-- `flow`
+- `wflow`
   - `tidy`
 
     - `add`: Add the current path to projects
